@@ -1,86 +1,238 @@
 {% extends "base.html" %}
 
-{% block titulo %}Informe de tareas{% endblock %}
+{% block titulo %}Informe de Incidencias del Sistema{% endblock %}
 
 {% block contenido %}
 
-<h2>Filtros</h2>
+<h2>📊 Filtros</h2>
 <div class="filtros">
   <form method="get" action="/informe">
     <label>
-      Estado:
-      <select name="estado">
-        <option value="" {% if not estado %}selected{% endif %}>(Todos)</option>
-        <option value="pendiente" {% if estado == "pendiente" %}selected{% endif %}>Pendiente</option>
-        <option value="en_curso" {% if estado == "en_curso" %}selected{% endif %}>En curso</option>
-        <option value="completada" {% if estado == "completada" %}selected{% endif %}>Completada</option>
+      Categoría:
+      <select name="categoria">
+        <option value="" {% if not categoria %}selected{% endif %}>(Todas)</option>
+        <option value="red" {% if categoria=="red" %}selected{% endif %}>🌐 Red</option>
+        <option value="hardware" {% if categoria=="hardware" %}selected{% endif %}>💻 Hardware</option>
+        <option value="software" {% if categoria=="software" %}selected{% endif %}>⚙️ Software</option>
       </select>
     </label>
 
     <label>
-      Prioridad minima:
-      <input type="number" name="min_prioridad" min="0" max="5" value="{{ min_prioridad }}" />
+      Gravedad mínima:
+      <input type="number" name="min_gravedad" min="1" max="5" value="{{ min_gravedad }}" />
     </label>
 
-    <button type="submit">Aplicar filtros</button>
+    <button type="submit">🔍 Aplicar filtros</button>
   </form>
 </div>
 
-<h2>Resumen</h2>
-<ul>
-  <li>Total de tareas: {{ resumen.total }}</li>
-  <li>Tareas completadas: {{ resumen.completadas }}</li>
-  <li>Porcentaje completadas: {{ resumen.porcentaje_completadas }} %</li>
-</ul>
+<h2>📈 Resumen</h2>
+<div style="background: #f8f9ff; padding: 1.5rem; border-radius: 10px; margin-bottom: 2rem;">
+  <ul style="list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+    <li style="background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      <strong style="color: #667eea; font-size: 2rem;">{{ resumen.total }}</strong><br>
+      <span style="color: #666;">Total de incidencias</span>
+    </li>
+    <li style="background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      <strong style="color: #10b981; font-size: 2rem;">{{ resumen.resueltas }}</strong><br>
+      <span style="color: #666;">Incidencias resueltas</span>
+    </li>
+    <li style="background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      <strong style="color: #ef4444; font-size: 2rem;">{{ resumen.pendientes }}</strong><br>
+      <span style="color: #666;">Incidencias pendientes</span>
+    </li>
+    <li style="background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      <strong style="color: #667eea; font-size: 2rem;">{{ resumen.porcentaje_resueltas }}%</strong><br>
+      <span style="color: #666;">Porcentaje resueltas</span>
+    </li>
+  </ul>
+</div>
 
-<h2>Detalle de tareas</h2>
+<h2>📋 Detalle de Incidencias</h2>
 <table>
   <thead>
     <tr>
       <th>ID</th>
-      <th>Titulo</th>
+      <th>Título</th>
+      <th>Descripción</th>
+      <th>Categoría</th>
+      <th>Gravedad</th>
       <th>Estado</th>
-      <th>Prioridad</th>
-      <th>Horas</th>
     </tr>
   </thead>
   <tbody>
-    {% for tarea in tareas %}
+    {% for inc in incidencias %}
     <tr>
-      <td>{{ tarea.id if tarea.id is defined else tarea["id"] }}</td>
-      <td>{{ tarea.titulo if tarea.titulo is defined else tarea["titulo"] }}</td>
-      <td>{{ tarea.estado if tarea.estado is defined else tarea["estado"] }}</td>
-      <td>{{ tarea.prioridad if tarea.prioridad is defined else tarea["prioridad"] }}</td>
-      <td>{{ tarea.horas if tarea.horas is defined else tarea["horas"] }}</td>
+      <td><strong>#{{ inc.id }}</strong></td>
+      <td>{{ inc.titulo }}</td>
+      <td style="color: #666;">{{ inc.descripcion }}</td>
+      <td>
+        {% if inc.categoria == "red" %}
+        🌐 Red
+        {% elif inc.categoria == "hardware" %}
+        💻 Hardware
+        {% else %}
+        ⚙️ Software
+        {% endif %}
+      </td>
+      <td>
+        <span style="
+          background: {% if inc.gravedad >= 4 %}#ef4444{% elif inc.gravedad == 3 %}#f59e0b{% else %}#10b981{% endif %};
+          color: white;
+          padding: 0.3rem 0.8rem;
+          border-radius: 20px;
+          font-weight: 600;
+        ">
+          {{ inc.gravedad }}/5
+        </span>
+      </td>
+      <td>
+        {% if inc.resuelta %}
+        <span style="color: #10b981; font-weight: 600;">✅ Resuelta</span>
+        {% else %}
+        <span style="color: #ef4444; font-weight: 600;">⏳ Pendiente</span>
+        {% endif %}
+      </td>
     </tr>
     {% endfor %}
-    {% if tareas|length == 0 %}
+    {% if incidencias|length == 0 %}
     <tr>
-      <td colspan="5">No hay tareas que cumplan los filtros.</td>
+      <td colspan="6" style="text-align: center; padding: 2rem; color: #999;">
+        No hay incidencias que cumplan los filtros seleccionados.
+      </td>
     </tr>
     {% endif %}
   </tbody>
 </table>
 
-<h2>Grafico: numero de tareas por estado</h2>
-<canvas id="grafico" width="800" height="300"></canvas>
+<!-- Sección de gráficos -->
+<div style="margin-top: 3rem;">
+  <h2>📊 Gráfico 1: Incidencias por Categoría</h2>
+  <div
+    style="background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+    <canvas id="graficoCategoria" width="800" height="300"></canvas>
+  </div>
 
+  <!-- ✨ MODIFICACIÓN OBLIGATORIA: Segundo gráfico (Pie Chart) ✨ -->
+  <h2>🥧 Gráfico 2: Estado de Resolución (Resueltas vs Pendientes)</h2>
+  <div style="background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <canvas id="graficoEstado" width="400" height="400"></canvas>
+  </div>
+</div>
+
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  const labels = {{ labels | tojson }};
-  const values = {{ values | tojson }};
+  // Gráfico 1: Incidencias por categoría (Bar Chart)
+  const labelsCategoria = {{ labels_categorias | tojson }};
+  const valoresCategoria = {{ valores_categorias | tojson }};
 
-  const ctx = document.getElementById("grafico").getContext("2d");
-  new Chart(ctx, {
+  const ctxCategoria = document.getElementById("graficoCategoria").getContext("2d");
+  new Chart(ctxCategoria, {
     type: "bar",
     data: {
-      labels: labels,
+      labels: labelsCategoria.map(cat => {
+        if (cat === 'red') return '🌐 Red';
+        if (cat === 'hardware') return '💻 Hardware';
+        return '⚙️ Software';
+      }),
       datasets: [
         {
-          label: "Numero de tareas",
-          data: values,
+          label: "Número de incidencias",
+          data: valoresCategoria,
+          backgroundColor: [
+            "rgba(102, 126, 234, 0.8)",
+            "rgba(118, 75, 162, 0.8)",
+            "rgba(237, 100, 166, 0.8)",
+          ],
+          borderColor: [
+            "rgba(102, 126, 234, 1)",
+            "rgba(118, 75, 162, 1)",
+            "rgba(237, 100, 166, 1)",
+          ],
+          borderWidth: 2,
         },
       ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+        },
+        title: {
+          display: true,
+          text: 'Distribución de Incidencias por Categoría',
+          font: {
+            size: 16,
+            weight: 'bold'
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1
+          }
+        },
+      },
+    },
+  });
+
+  // ✨ Gráfico 2: Estado de resolución (Pie Chart) - MODIFICACIÓN OBLIGATORIA ✨
+  const labelsEstado = {{ labels_estado | tojson }};
+  const valoresEstado = {{ valores_estado | tojson }};
+
+  const ctxEstado = document.getElementById("graficoEstado").getContext("2d");
+  new Chart(ctxEstado, {
+    type: "pie",
+    data: {
+      labels: labelsEstado,
+      datasets: [
+        {
+          label: "Incidencias",
+          data: valoresEstado,
+          backgroundColor: [
+            "rgba(16, 185, 129, 0.8)",  // Verde para resueltas
+            "rgba(239, 68, 68, 0.8)",    // Rojo para pendientes
+          ],
+          borderColor: [
+            "rgba(16, 185, 129, 1)",
+            "rgba(239, 68, 68, 1)",
+          ],
+          borderWidth: 2,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+        },
+        title: {
+          display: true,
+          text: 'Porcentaje de Incidencias Resueltas vs Pendientes',
+          font: {
+            size: 16,
+            weight: 'bold'
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: function (context) {
+              let label = context.label || '';
+              let value = context.parsed || 0;
+              let total = context.dataset.data.reduce((a, b) => a + b, 0);
+              let percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+              return label + ': ' + value + ' (' + percentage + '%)';
+            }
+          }
+        }
+      },
     },
   });
 </script>

@@ -10,12 +10,18 @@ app = FastAPI()
 BASE_DIR = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
-TAREAS = [
-    {"id": 1, "titulo": "Disenar interfaz", "estado": "pendiente", "prioridad": 3, "horas": 5},
-    {"id": 2, "titulo": "Implementar backend", "estado": "en_curso", "prioridad": 5, "horas": 12},
-    {"id": 3, "titulo": "Pruebas unitarias", "estado": "pendiente", "prioridad": 2, "horas": 4},
-    {"id": 4, "titulo": "Documentar API", "estado": "completada", "prioridad": 4, "horas": 3},
-    {"id": 5, "titulo": "Despliegue", "estado": "completada", "prioridad": 5, "horas": 2},
+# Datos de incidencias
+INCIDENCIAS = [
+    {"id": 1, "titulo": "Router principal caído", "descripcion": "Router principal sin conexión en sala de servidores", "categoria": "red", "gravedad": 5, "resuelta": False},
+    {"id": 2, "titulo": "Disco duro defectuoso", "descripcion": "Servidor DB con disco duro fallando, sectores dañados", "categoria": "hardware", "gravedad": 4, "resuelta": True},
+    {"id": 3, "titulo": "Error en base de datos", "descripcion": "Base de datos no responde a consultas", "categoria": "software", "gravedad": 5, "resuelta": False},
+    {"id": 4, "titulo": "Cable de red dañado", "descripcion": "Cable ethernet dañado en oficina 3", "categoria": "red", "gravedad": 2, "resuelta": True},
+    {"id": 5, "titulo": "Teclado no funciona", "descripcion": "Teclado de PC-15 no responde", "categoria": "hardware", "gravedad": 1, "resuelta": True},
+    {"id": 6, "titulo": "Aplicación CRM lenta", "descripcion": "CRM muy lento, timeouts frecuentes", "categoria": "software", "gravedad": 3, "resuelta": False},
+    {"id": 7, "titulo": "Switch sin energía", "descripcion": "Switch principal piso 2 sin alimentación", "categoria": "red", "gravedad": 4, "resuelta": False},
+    {"id": 8, "titulo": "RAM defectuosa", "descripcion": "Servidor con módulo de memoria fallando", "categoria": "hardware", "gravedad": 5, "resuelta": True},
+    {"id": 9, "titulo": "Firewall bloqueando tráfico", "descripcion": "Reglas de firewall mal configuradas", "categoria": "red", "gravedad": 3, "resuelta": True},
+    {"id": 10, "titulo": "Licencia de software vencida", "descripcion": "Licencia de antivirus corporativo vencida", "categoria": "software", "gravedad": 4, "resuelta": False},
 ]
 
 
@@ -25,49 +31,63 @@ async def index(request: Request):
         "base.html",
         {
             "request": request,
-            "contenido": "<p>Ve a <a href='/informe'>/informe</a> para ver el informe.</p>",
+            "contenido": "<p>Bienvenido al sistema de gestión de incidencias.</p><p>Ve a <a href='/informe'>/informe</a> para ver el informe completo.</p>",
         },
     )
 
 
 @app.get("/informe", response_class=HTMLResponse)
 async def informe(
-    request: Request,   
-    estado: Optional[str] = Query(None, description="Filtrar por estado"),  #query params
-    min_prioridad: int = Query(0, ge=0, le=5, description="Prioridad minima"),
+    request: Request,
+    categoria: Optional[str] = Query(None, description="Filtrar por categoría (red/hardware/software)"),
+    min_gravedad: int = Query(1, ge=1, le=5, description="Gravedad mínima (1-5)"),
 ):
-    tareas_filtradas = []
-    for tarea in TAREAS:
-        if estado is not None and tarea["estado"] != estado:
+    # Filtrar incidencias
+    incidencias_filtradas = []
+    for incidencia in INCIDENCIAS:
+        # Filtro por categoría
+        if categoria is not None and incidencia["categoria"] != categoria:
             continue
-        if tarea["prioridad"] < min_prioridad:
+        # Filtro por gravedad mínima
+        if incidencia["gravedad"] < min_gravedad:
             continue
-        tareas_filtradas.append(tarea)
+        incidencias_filtradas.append(incidencia)
 
-    total_tareas = len(tareas_filtradas)
-    completadas = sum(1 for tarea in tareas_filtradas if tarea["estado"] == "completada")
-    porcentaje_completadas = (completadas / total_tareas * 100) if total_tareas > 0 else 0
+    # Calcular resumen
+    total_incidencias = len(incidencias_filtradas)
+    resueltas = sum(1 for inc in incidencias_filtradas if inc["resuelta"])
+    porcentaje_resueltas = (resueltas / total_incidencias * 100) if total_incidencias > 0 else 0
 
     resumen = {
-        "total": total_tareas,
-        "completadas": completadas,
-        "porcentaje_completadas": round(porcentaje_completadas, 2),
+        "total": total_incidencias,
+        "resueltas": resueltas,
+        "pendientes": total_incidencias - resueltas,
+        "porcentaje_resueltas": round(porcentaje_resueltas, 2),
     }
 
-    estados_posibles = ["pendiente", "en_curso", "completada"]
-    labels = estados_posibles
-    values = [sum(1 for tarea in tareas_filtradas if tarea["estado"] == e) for e in estados_posibles]
+    # Datos para gráfico de barras (incidencias por categoría)
+    categorias = ["red", "hardware", "software"]
+    valores_categorias = [
+        sum(1 for inc in incidencias_filtradas if inc["categoria"] == cat)
+        for cat in categorias
+    ]
+
+    # Datos para gráfico de pastel (resueltas vs pendientes)
+    labels_estado = ["Resueltas", "Pendientes"]
+    valores_estado = [resumen["resueltas"], resumen["pendientes"]]
 
     return templates.TemplateResponse(
         "informe.html",
         {
             "request": request,
-            "tareas": tareas_filtradas,
+            "incidencias": incidencias_filtradas,
             "resumen": resumen,
-            "labels": labels,
-            "values": values,
-            "estado": estado,
-            "min_prioridad": min_prioridad,
+            "labels_categorias": categorias,
+            "valores_categorias": valores_categorias,
+            "labels_estado": labels_estado,
+            "valores_estado": valores_estado,
+            "categoria": categoria,
+            "min_gravedad": min_gravedad,
         },
     )
 
